@@ -11,6 +11,7 @@ namespace testStartup.Models
 
         public string Descricao {get; set;}
 
+        [Required(ErrorMessage = "Este cammpo não pode ser vazio")]
         public  float Preco{get; set;}
 
 
