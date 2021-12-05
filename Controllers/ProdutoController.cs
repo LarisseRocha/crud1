@@ -7,6 +7,8 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using teste_master.Interfaces;
+using Microsoft.AspNetCore.Http;
 
 namespace testStartup.Controllers
 {
@@ -16,37 +18,43 @@ namespace testStartup.Controllers
 
     public class ProdutoController : ControllerBase
     {
-        private DataContext _context;
-        //private RepositorioProduto _repositorioProduto;
+        private IProduto _repositorioProduto;
         //private readonly IMapper _mapper;
     
-        public ProdutoController(
-            DataContext context)
+        public ProdutoController(IProduto repositorioProduto)
         {
-            _context = context;
-           // _repositorioProduto = repositorioProduto;
+           
+            _repositorioProduto = repositorioProduto;
             
         }
         
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Produto>>> GetProduct()
         {
-            var produto =  await _context.Produto.ToListAsync();
-            return Ok(produto);
+            
+            try
+            {
+                var listaProduto =  await _repositorioProduto.GetAllProdutosAsync();
+                return Ok(listaProduto);
+            }
+            catch (Exception exeption)
+            {
+                return this.StatusCode(StatusCodes.Status500InternalServerError,
+                    $"Falha ao tentar obter so produtos. Erro: {exeption.Message}");
+            }
         }
 
         [HttpPost]
         public async Task<IActionResult> CadastrarProduto([FromForm] Produto model)
         {
-              _context.Add(model);
-              _context.SaveChanges();
+              await _repositorioProduto.AddProdutoAsync(model);
               return Ok(model);
         }
         [HttpGet("{id}")]
         
         public async Task<IActionResult> GetById(int id)
         {
-            var produto = await _context.Produto.FindAsync(id);
+            var produto = await _repositorioProduto.GetProdutoAsyncById(id);
             return Ok(produto);
             
         }
@@ -54,21 +62,27 @@ namespace testStartup.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var produto = await _context.Produto.FindAsync(id);
-            _context.Produto.Remove(produto);
-            _context.SaveChanges();
-            return Ok(produto);
+             try
+            {
+                var produto =  await _repositorioProduto.DeleteProdutoAsync(id);
+                if(produto == null){
+
+                    throw new InvalidOperationException("Produto com esse ID não existe!");  
+                }
+                return Ok("Produto deletado com sucesso");
+            }
+            catch (Exception exeption)
+            {
+                return this.StatusCode(StatusCodes.Status500InternalServerError,
+                    $"Falha ao tentar obter so produtos. Erro: {exeption.Message}");
+            }
         }
 
         [HttpPut("{id}")]
          public async Task<IActionResult> Update(int id, Produto produto)
         {
-            var produtoAchado = await _context.Produto.FindAsync(id);  
-            //produtoAchado = produto;
-            produtoAchado.Descricao = produto.Descricao;
-            produtoAchado.Preco = produto.Preco;
-            _context.Produto.Update(produtoAchado);
-            _context.SaveChanges();
+           // var produtoAntes = _repositorioProduto.GetProdutoAsyncById(id);
+            var produtoAchado = await _repositorioProduto.UpdateProdutoAsync(id, produto);
             return Ok(produtoAchado);
         }
        
